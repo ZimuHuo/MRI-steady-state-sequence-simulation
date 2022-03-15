@@ -115,6 +115,95 @@ def iterative_SSFP(M0, alpha, phi, dphi, beta, TR, TE, T1, T2, Nr):
     signal = np.matmul(P,signal)
     return signal
 
+def iterative_pcSSFP(M0, alpha, phi, dphi, beta, TR, TE, T1, T2, Nr):
+    
+    '''
+    -------------------------------------------------------------------------
+    Parameters
+    
+    M0: scalar  
+    Initial magnetization in the B0 field, function of the proton density rho  
+    
+    Alpha: radian 
+    Flip or tip angle of the magnetization vector 
+    
+    phi: radian 
+    Angle between the vector and x axis/ phase
+    
+    dphi: radian 
+    Increment of phi
+    
+    TR: scalar in msec  
+    Repition time of the pulse sequence 
+    
+    TE: scalar in msec  
+    Echo time 
+    
+    T1: scalar in msec
+    T1 value of the tissue
+    
+    T2: scalar in msec
+    T2 value of the tissue
+    
+    Nr: scalar 
+    Number of simulation   
+    
+    -------------------------------------------------------------------------
+    Returns
+    Signal : array like
+    Signal with x y z value in 1 by 3 vector [x, y, z]
+    
+    -------------------------------------------------------------------------
+    Notes
+    Michael's paper section 4 in the end    
+    
+    -------------------------------------------------------------------------
+    References
+    
+    [1] 
+    Author: Michael A. Mendoza
+    Title: Water Fat Separation with Multiple Acquisition Balanced Steady State Free Precession MRI
+    Link: https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=5303&context=etd
+    '''
+    
+    assert alpha != 0, 'Only non zero numbers are allowed'
+    assert T1 != 0, 'Only non zero numbers are allowed'
+    assert T2 != 0, 'Only non zero numbers are allowed'
+    assert TE != 0, 'Only non zero numbers are allowed'
+    assert TR != 0, 'Only non zero numbers are allowed'
+    assert TE <= TR, 'TE must be shorter than or equal to TR'
+    
+    
+    signal = M0
+    M = M0[2]
+    
+    for i in range(Nr):
+        signal = np.matmul(rotMat(alpha, phi),signal) 
+        signal[0] = signal[0]*np.exp(-TR/T2)
+        signal[1] = signal[1]*np.exp(-TR/T2)
+        signal[2] = M+(signal[2]-M)*np.exp(-TR/T1)
+        P = np.array([
+            [ np.cos(beta),  np.sin(beta),   0],
+            [-np.sin(beta),  np.cos(beta),   0],
+            [            0,             0,   1]
+            ])
+        signal = np.matmul(P,signal)
+        phi = phi + dphi
+    signal = np.matmul(rotMat(alpha, phi),signal) 
+    signal[0] = signal[0]*np.exp(-TR/T2)
+    signal[1] = signal[1]*np.exp(-TR/T2)
+    signal[2] = M+(signal[2]-M)*np.exp(-TR/T1) 
+    P = np.array([
+            [ np.cos(beta*TE/TR),  np.sin(beta*TE/TR),   0],
+            [-np.sin(beta*TE/TR),  np.cos(beta*TE/TR),   0],
+            [            0,             0,   1]
+            ])
+    signal = np.matmul(P,signal)
+    return signal
+
+
+
+
 def vectorform_SSFP(M0, alpha, phi, dphi, beta, TR, TE, T1, T2, Nr):
     #M = np.asarray([0, 0, M0])
     
